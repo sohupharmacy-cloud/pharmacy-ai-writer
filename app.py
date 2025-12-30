@@ -15,9 +15,10 @@ else:
     api_key = st.sidebar.text_input("Gemini API Key", type="password")
 
 # --- 2. 處理 Google Docs 存檔函數 ---
+# --- 修改後的存檔函式 (直接在目標資料夾建立) ---
 def save_to_google_doc(title, content):
     try:
-        # 讀取機器人憑證
+        # 1. 檢查憑證
         if "gcp_service_account" not in st.secrets:
             return "❌ 尚未設定 Google 憑證"
             
@@ -26,35 +27,29 @@ def save_to_google_doc(title, content):
             scopes=['https://www.googleapis.com/auth/documents', 'https://www.googleapis.com/auth/drive']
         )
         
+        # 建立服務
         docs_service = build('docs', 'v1', credentials=creds)
         drive_service = build('drive', 'v3', credentials=creds)
         folder_id = st.secrets["TARGET_FOLDER_ID"]
 
-        # A. 建立一個空白文件
-        doc_title = f"{datetime.date.today()} - {title}"
-        doc = docs_service.documents().create(body={'title': doc_title}).execute()
-        doc_id = doc.get('documentId')
+        # 2. 直接在「目標資料夾」內建立檔案 (這是改良的關鍵)
+        file_metadata = {
+            'name': f"{datetime.date.today()} - {title}",
+            'mimeType': 'application/vnd.google-apps.document',
+            'parents': [folder_id] # 直接指定父母是誰
+        }
+        
+        # 使用 Drive API 建立檔案
+        file = drive_service.files().create(body=file_metadata, fields='id').execute()
+        doc_id = file.get('id')
 
-        # B. 寫入內容
+        # 3. 寫入內容 (使用 Docs API)
         requests = [
             {'insertText': {'location': {'index': 1}, 'text': content}},
         ]
         docs_service.documents().batchUpdate(documentId=doc_id, body={'requests': requests}).execute()
 
-        # C. 移動到指定資料夾 (這一步最關鍵)
-        # 1. 獲取文件目前的父資料夾 (通常是根目錄)
-        file = drive_service.files().get(fileId=doc_id, fields='parents').execute()
-        previous_parents = ",".join(file.get('parents'))
-        
-        # 2. 把它移到我們的目標資料夾
-        drive_service.files().update(
-            fileId=doc_id,
-            addParents=folder_id,
-            removeParents=previous_parents,
-            fields='id, parents'
-        ).execute()
-
-        return f"✅ 已儲存至 Google 文件！(檔名: {doc_title})"
+        return f"✅ 成功！已直接存入資料夾，檔名：{file_metadata['name']}"
 
     except Exception as e:
         return f"⚠️ 存檔失敗: {str(e)}"
