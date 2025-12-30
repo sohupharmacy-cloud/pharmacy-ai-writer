@@ -6,8 +6,14 @@ st.set_page_config(page_title="藥師文案產生器 v2026", page_icon="💊")
 st.title("💊 藥局社群文案神隊友 (2.5版)")
 st.caption("使用最新 Gemini 2.5 AI，輸入主題與重點，幫你生成吸睛文案！")
 
-# 2. 側邊欄輸入 API Key
-api_key = st.sidebar.text_input("請輸入你的 Google Gemini API Key", type="password")
+
+# 2.嘗試從系統機密中讀取 API Key
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
+else:
+    # 如果機密裡沒有，才讓使用者手動輸入 (備用方案)
+    api_key = st.sidebar.text_input("請輸入 Google Gemini API Key", type="password")
+
 
 # 3. 輸入區
 col1, col2 = st.columns(2)
