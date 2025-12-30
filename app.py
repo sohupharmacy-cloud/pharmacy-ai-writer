@@ -30,7 +30,7 @@ if st.button("✨ 幫我產出文案！"):
     else:
         # 設定 Gemini API
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.5-flash')
 
         # 5. 【核心秘密】給 AI 的指令 (Prompt) - 包含法規防護
         prompt = f"""
